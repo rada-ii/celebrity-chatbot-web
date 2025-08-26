@@ -3,8 +3,8 @@
 AI-powered web application for realistic conversations with celebrities.
 
 ## Live Demo
-🌐 [Chat with Celebrities](https://celebrity-chatbot-web.streamlit.app)
-*(Link will be active after deployment)*
+🌐 [Chat with Celebrities](https://celebrity-chatbot.streamlit.app/)
+
 
 ## Features
 - Natural conversation with any celebrity
@@ -14,21 +14,20 @@ AI-powered web application for realistic conversations with celebrities.
 - Real-time chat experience
 
 ## Technology Stack
-- Python 3.8+
-- OpenAI GPT API
-- Streamlit web framework
-- Custom CSS styling
+- Python + Streamlit
+- OpenAI GPT-3.5-turbo API
+- Native Streamlit chat components
 
 ## Local Installation
 
 ### Prerequisites
 - Python 3.8 or higher
-- OpenAI API key
+- OpenAI API key ([Get one here](https://platform.openai.com/api-keys))
 
 ### Setup Steps
 1. Clone the repository:
 ```bash
-git clone https://github.com/YOUR_USERNAME/celebrity-chatbot-web.git
+git clone https://github.com/rada-ii/celebrity-chatbot-web.git
 cd celebrity-chatbot-web
 ```
 
@@ -66,7 +65,7 @@ celebrity-chatbot-web/
 ```
 
 ## Contributing
-This is a learning project. Feel free to fork and experiment.
+Feel free to fork and experiment with this learning project.
 
 ## License
 MIT License - feel free to use for educational purposes.
