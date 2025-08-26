@@ -36,12 +36,6 @@ st.markdown("""
         color: white; 
         text-align: center;
     }
-    .stChatInputContainer {
-        position: sticky;
-        bottom: 0;
-        background-color: #0e1117;
-        padding: 1rem 0;
-    }
 </style>
 """, unsafe_allow_html=True)
 
@@ -82,8 +76,6 @@ if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'conversation_started' not in st.session_state:
     st.session_state.conversation_started = False
-if 'last_user_message' not in st.session_state:
-    st.session_state.last_user_message = ""
 
 # Title
 st.markdown("# ⭐ Celebrity Chat Experience")
@@ -103,7 +95,6 @@ with st.sidebar:
                     "role": "system",
                     "content": f"You are {famous_person}. Act as this person would, but keep responses conversational and to 2-3 sentences. Be engaging and stay in character."
                 }]
-                st.session_state.last_user_message = ""
                 st.rerun()
     
     if st.session_state.conversation_started:
@@ -111,14 +102,13 @@ with st.sidebar:
         if st.button("🔄 New Conversation", type="secondary"):
             st.session_state.messages = []
             st.session_state.conversation_started = False
-            st.session_state.last_user_message = ""
             st.rerun()
 
 # Main chat interface
 if st.session_state.conversation_started:
     
     # Display all messages except system message
-    for msg in st.session_state.messages[1:]:  # Skip system message
+    for msg in st.session_state.messages[1:]:
         if msg["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
@@ -135,39 +125,33 @@ if st.session_state.conversation_started:
     # Chat input
     prompt = st.chat_input("Type your message here...")
     
-    # Process new message ONLY if it's different from the last one
-    if prompt and prompt != st.session_state.last_user_message:
-        # Store the current prompt to prevent reprocessing
-        st.session_state.last_user_message = prompt
-        
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        
-        # Get AI response immediately
-        with st.spinner(f"{famous_person} is thinking..."):
+    # KRITIČNO: Obradi samo ako postoji prompt I poslednja poruka NIJE user poruka
+    if prompt:
+        # Proveri da li je poslednja poruka već user poruka (da spreči duplikate)
+        if (len(st.session_state.messages) == 1 or  # Prva poruka
+            st.session_state.messages[-1]["role"] != "user"):  # Poslednja nije user poruka
+            
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": prompt})
+            
+            # Get AI response immediately
             try:
-                # Call OpenAI API
-                content = call_openai_api(
-                    st.session_state.messages,
-                    float(creativity) / 5,
-                    1000
-                )
+                with st.spinner(f"{famous_person} is thinking..."):
+                    content = call_openai_api(
+                        st.session_state.messages,
+                        float(creativity) / 5,
+                        1000
+                    )
                 
                 # Add AI response
                 st.session_state.messages.append({"role": "assistant", "content": content})
-                
-                # Clear the last message to allow new input
-                st.session_state.last_user_message = ""
-                
-                # Rerun to show the conversation
                 st.rerun()
                 
             except Exception as e:
                 st.error(f"Error: {e}")
                 # Remove the user message if API call failed
-                st.session_state.messages.pop()
-                st.session_state.last_user_message = ""
-                st.rerun()
+                if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+                    st.session_state.messages.pop()
 
 else:
     # Welcome screen
