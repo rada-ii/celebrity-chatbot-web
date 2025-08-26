@@ -1,20 +1,19 @@
 from dotenv import dotenv_values
 from openai import OpenAI
 
-# Get API key from environment (Streamlit secrets or local .env)
-try:
-    env_vars = dotenv_values('.env')
-    api_key = env_vars.get('OPEN_AI_KEY') or st.secrets.get('OPEN_AI_KEY')
-except:
-    api_key = st.secrets.get('OPEN_AI_KEY')
+# Load environment variables from .env file
+env_vars = dotenv_values('.env')
+api_key = env_vars.get('OPEN_AI_KEY')
 
+# Check if API key is available
 if not api_key:
-    st.error("API key not found. Please check your secrets configuration.")
-    st.stop()
+    print("API key not found. Please check your .env file.")
+    exit()
 
+# Initialize OpenAI client
 client = OpenAI(api_key=api_key)
 
-# Celebrity name validation
+# Celebrity name input validation
 while True:
     famous_person = input("What celebrity person would you like to talk to?\n").strip()
     if famous_person:
@@ -22,7 +21,7 @@ while True:
     else:
         print("Please enter a celebrity name.")
 
-# Initial question validation
+# Initial question input validation
 while True:
     initial_prompt = input(f"Ok! Now ask {famous_person} a question!\n").strip()
     if initial_prompt:
@@ -30,7 +29,7 @@ while True:
     else:
         print("Please enter a question.")
 
-# Creativity validation
+# Creativity level input validation
 while True:
     creativity = input("How creative do you want the responses to be (on scale 0-10)?\n").strip()
     try:
@@ -43,6 +42,7 @@ while True:
     except ValueError:
         print("Please enter a valid number between 0 and 10.")
 
+# Initialize conversation with system and user messages
 messages = [
     {
         "role": "system",
@@ -64,8 +64,10 @@ messages = [
     }
 ]
 
+# Main conversation loop
 while True:
     try:
+        # Call OpenAI API
         response = client.responses.create(
             model="gpt-3.5-turbo",
             input=messages,
@@ -83,8 +85,10 @@ while True:
             include=[]
         )
 
+        # Extract response content
         content = response.output[0].content[0].text
 
+        # Add assistant response to conversation history
         messages.append({
             "role": "assistant",
             "content": [
@@ -95,9 +99,10 @@ while True:
             ]
         })
 
+        # Display celebrity response
         print(f"\n{famous_person}: {content}\n")
 
-        # User response validation
+        # Get user response with validation
         while True:
             prompt = input(f'Respond to {famous_person} (or type "bye" to exit): ').strip()
             if prompt:
@@ -105,10 +110,12 @@ while True:
             else:
                 print("Please enter a response or type 'bye' to exit.")
 
+        # Check for exit command
         if prompt.lower() == "bye":
             print("Thanks for chatting!")
             break
 
+        # Add user response to conversation history
         messages.append({
             "role": "user",
             "content": [
