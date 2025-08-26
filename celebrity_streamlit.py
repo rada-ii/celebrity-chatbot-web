@@ -51,9 +51,9 @@ if not api_key:
     st.error("API key not found. Please check your secrets configuration.")
     st.stop()
 
-# Function to call OpenAI API (REMOVED @st.cache_data)
+# Function to call OpenAI API
 def call_openai_api(messages, temperature, max_tokens):
-    """Call OpenAI API without caching"""
+    """Call OpenAI API"""
     headers = {
         "Authorization": f"Bearer {api_key}",
         "Content-Type": "application/json"
@@ -82,8 +82,6 @@ if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'conversation_started' not in st.session_state:
     st.session_state.conversation_started = False
-if 'awaiting_response' not in st.session_state:
-    st.session_state.awaiting_response = False
 
 # Title
 st.markdown("# ⭐ Celebrity Chat Experience")
@@ -103,7 +101,6 @@ with st.sidebar:
                     "role": "system",
                     "content": f"You are {famous_person}. Act as this person would, but keep responses conversational and to 2-3 sentences. Be engaging and stay in character."
                 }]
-                st.session_state.awaiting_response = False
                 st.rerun()
     
     if st.session_state.conversation_started:
@@ -111,13 +108,13 @@ with st.sidebar:
         if st.button("🔄 New Conversation", type="secondary"):
             st.session_state.messages = []
             st.session_state.conversation_started = False
-            st.session_state.awaiting_response = False
             st.rerun()
 
 # Main chat interface
 if st.session_state.conversation_started:
+    
     # Display all messages except system message
-    for msg in st.session_state.messages[1:]:
+    for msg in st.session_state.messages[1:]:  # Skip system message
         if msg["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
@@ -131,8 +128,19 @@ if st.session_state.conversation_started:
             </div>
             """, unsafe_allow_html=True)
     
-    # Show loading if awaiting response
-    if st.session_state.awaiting_response:
+    # Chat input
+    if prompt := st.chat_input("Type your message here..."):
+        # Add user message immediately and display it
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display the new user message right away
+        st.markdown(f"""
+        <div class="chat-message user-message">
+            <strong>You:</strong> {prompt}
+        </div>
+        """, unsafe_allow_html=True)
+        
+        # Show loading and get AI response
         with st.spinner(f"{famous_person} is thinking..."):
             try:
                 # Call OpenAI API
@@ -144,22 +152,15 @@ if st.session_state.conversation_started:
                 
                 # Add AI response
                 st.session_state.messages.append({"role": "assistant", "content": content})
-                st.session_state.awaiting_response = False
+                
+                # Force rerun to show the AI response
                 st.rerun()
                 
             except Exception as e:
                 st.error(f"Error: {e}")
-                st.session_state.awaiting_response = False
-    
-    # Chat input
-    prompt = st.chat_input("Type your message here...", disabled=st.session_state.awaiting_response)
-    
-    # Process new message
-    if prompt and not st.session_state.awaiting_response:
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": prompt})
-        st.session_state.awaiting_response = True
-        st.rerun()
+                # Remove the user message if API call failed
+                st.session_state.messages.pop()
+                st.rerun()
 
 else:
     # Welcome screen
