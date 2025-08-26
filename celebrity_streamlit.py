@@ -2,7 +2,15 @@ import streamlit as st
 from dotenv import dotenv_values
 from openai import OpenAI
 
-# Custom CSS
+# Page configuration - MUST be first Streamlit command
+st.set_page_config(
+    page_title="Celebrity Chat Bot",
+    page_icon="⭐",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
+# Custom CSS styling
 st.markdown("""
 <style>
     .main {
@@ -50,39 +58,35 @@ st.markdown("""
         text-shadow: 2px 2px 4px rgba(0,0,0,0.3);
     }
     @media (max-width: 768px) {
-    .chat-message {
-        margin-left: 5% !important;
-        margin-right: 5% !important;
+        .chat-message {
+            margin-left: 5% !important;
+            margin-right: 5% !important;
+        }
     }
-}
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize OpenAI client
+# Initialize OpenAI client with proper API key handling
 try:
+    # Try to get API key from Streamlit secrets (for cloud deployment)
     api_key = st.secrets["OPEN_AI_KEY"]
 except:
+    # Fallback to local .env file (for local development)
     env_vars = dotenv_values('.env')
     api_key = env_vars.get('OPEN_AI_KEY')
 
+# Check if API key is available
 if not api_key:
-    st.error("API key not found")
+    st.error("API key not found. Please check your secrets configuration.")
     st.stop()
 
+# Initialize OpenAI client
 client = OpenAI(api_key=api_key)
 
-# Page config
-st.set_page_config(
-    page_title="Celebrity Chat Bot",
-    page_icon="⭐",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
-
-# Title with better styling
+# Main title with custom styling
 st.markdown("<h1>⭐ Celebrity Chat Experience</h1>", unsafe_allow_html=True)
 
-# Create columns for better layout
+# Create responsive column layout
 col1, col2, col3 = st.columns([1, 2, 1])
 
 with col2:
@@ -92,34 +96,37 @@ with col2:
     </div>
     """, unsafe_allow_html=True)
 
-# Sidebar with better styling
+# Sidebar configuration and controls
 with st.sidebar:
     st.markdown("### ⚙️ Chat Settings")
-
+    
+    # Celebrity name input
     famous_person = st.text_input(
         "Celebrity Name",
         value="Elon Musk",
         help="Enter any famous person's name"
     )
-
+    
+    # Creativity slider
     creativity = st.slider(
         "Response Creativity",
         0, 10, 5,
         help="Higher values = more creative responses"
     )
-
+    
     st.markdown("---")
-
-    # Initialize session state
+    
+    # Initialize session state for conversation management
     if 'messages' not in st.session_state:
         st.session_state.messages = []
         st.session_state.conversation_started = False
-
-    # Start button with better styling
+    
+    # Start conversation button
     if not st.session_state.conversation_started:
         if st.button("🚀 Start Conversation", use_container_width=True):
             if famous_person.strip():
                 st.session_state.conversation_started = True
+                # Initialize conversation with system prompt
                 st.session_state.messages = [{
                     "role": "system",
                     "content": [{
@@ -130,25 +137,25 @@ with st.sidebar:
                 st.rerun()
             else:
                 st.error("Please enter a celebrity name")
-
-    # Reset button
+    
+    # Reset conversation button
     if st.session_state.conversation_started:
         if st.button("🔄 New Conversation", use_container_width=True):
             st.session_state.messages = []
             st.session_state.conversation_started = False
             st.rerun()
-
+        
         st.markdown("---")
         st.markdown(f"**Currently chatting with:** {famous_person}")
 
-# Main chat area
+# Main chat interface
 if st.session_state.conversation_started:
-    # Chat container
+    # Chat history container
     chat_container = st.container()
-
+    
     with chat_container:
-        # Display conversation history
-        for msg in st.session_state.messages[1:]:  # Skip system message
+        # Display conversation history (skip system message)
+        for msg in st.session_state.messages[1:]:
             if msg["role"] == "user":
                 st.markdown(f"""
                 <div class="chat-message user-message">
@@ -161,21 +168,23 @@ if st.session_state.conversation_started:
                     <strong>{famous_person}:</strong> {msg['content'][0]['text']}
                 </div>
                 """, unsafe_allow_html=True)
-
-    # User input at bottom
+    
+    # User input field
     user_input = st.chat_input(f"Message {famous_person}...")
-
+    
+    # Process user input and get AI response
     if user_input and user_input.strip():
-        # Add user message
+        # Add user message to conversation
         user_msg = {
             "role": "user",
             "content": [{"type": "input_text", "text": user_input}]
         }
         st.session_state.messages.append(user_msg)
-
-        # Get AI response
+        
+        # Get AI response with error handling
         try:
             with st.spinner(f"{famous_person} is typing..."):
+                # Call OpenAI API
                 response = client.responses.create(
                     model="gpt-3.5-turbo",
                     input=st.session_state.messages,
@@ -188,22 +197,23 @@ if st.session_state.conversation_started:
                     store=True,
                     include=[]
                 )
-
+                
+                # Extract response content
                 content = response.output[0].content[0].text
-
-                # Add assistant response
+                
+                # Add assistant response to conversation
                 assistant_msg = {
                     "role": "assistant",
                     "content": [{"type": "output_text", "text": content}]
                 }
                 st.session_state.messages.append(assistant_msg)
                 st.rerun()
-
+                
         except Exception as e:
             st.error(f"Connection error: {e}")
 
 else:
-    # Welcome message
+    # Welcome screen when conversation hasn't started
     with col2:
         st.markdown("""
         <div style='text-align: center; color: white; padding: 2rem; background-color: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 2rem;'>
