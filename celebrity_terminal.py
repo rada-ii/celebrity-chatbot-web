@@ -46,57 +46,32 @@ while True:
 messages = [
     {
         "role": "system",
-        "content": [
-            {
-                "type": "input_text",
-                "text": f"You are {famous_person}. Embody their personality, speaking patterns, and viewpoints. Keep responses conversational and engaging while maintaining their authentic voice. Limit responses to 2-3 sentences for natural conversation flow."
-            }
-        ]
+        "content": f"You are {famous_person}. Embody their personality, speaking patterns, and viewpoints. Keep responses conversational and engaging while maintaining their authentic voice. Limit responses to 2-3 sentences for natural conversation flow."
     },
     {
         "role": "user",
-        "content": [
-            {
-                "type": "input_text",
-                "text": initial_prompt
-            }
-        ]
+        "content": initial_prompt
     }
 ]
 
 # Main conversation loop
 while True:
     try:
-        # Call OpenAI API
-        response = client.responses.create(
+        # Call OpenAI Chat Completions API
+        response = client.chat.completions.create(
             model="gpt-3.5-turbo",
-            input=messages,
-            text={
-                "format": {
-                    "type": "text"
-                }
-            },
-            reasoning={},
-            tools=[],
+            messages=messages,
             temperature=creativity_num,
-            max_output_tokens=2048,
-            top_p=1,
-            store=True,
-            include=[]
+            max_tokens=2048
         )
 
         # Extract response content
-        content = response.output[0].content[0].text
+        content = response.choices[0].message.content
 
         # Add assistant response to conversation history
         messages.append({
             "role": "assistant",
-            "content": [
-                {
-                    "type": "output_text",
-                    "text": content
-                }
-            ]
+            "content": content
         })
 
         # Display celebrity response
@@ -118,12 +93,7 @@ while True:
         # Add user response to conversation history
         messages.append({
             "role": "user",
-            "content": [
-                {
-                    "type": "input_text",
-                    "text": prompt
-                }
-            ]
+            "content": prompt
         })
 
     except Exception as e:
