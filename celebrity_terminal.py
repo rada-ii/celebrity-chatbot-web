@@ -2,7 +2,7 @@ from dotenv import dotenv_values
 from openai import OpenAI
 
 env_vars = dotenv_values('.env')
-client = OpenAI(api_key=env_vars['OPEN_AI_KEY'])
+client = OpenAI(api_key=st.secrets['OPEN_AI_KEY'])
 
 # Celebrity name validation
 while True:
