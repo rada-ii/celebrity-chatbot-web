@@ -59,8 +59,17 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize OpenAI client
-env_vars = dotenv_values('.env')
-client = OpenAI(api_key=env_vars['OPEN_AI_KEY'])
+try:
+    api_key = st.secrets["OPEN_AI_KEY"]
+except:
+    env_vars = dotenv_values('.env')
+    api_key = env_vars.get('OPEN_AI_KEY')
+
+if not api_key:
+    st.error("API key not found")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
 
 # Page config
 st.set_page_config(
