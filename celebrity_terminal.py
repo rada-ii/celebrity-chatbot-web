@@ -1,8 +1,18 @@
 from dotenv import dotenv_values
 from openai import OpenAI
 
-env_vars = dotenv_values('.env')
-client = OpenAI(api_key=st.secrets['OPEN_AI_KEY'])
+# Get API key from environment (Streamlit secrets or local .env)
+try:
+    env_vars = dotenv_values('.env')
+    api_key = env_vars.get('OPEN_AI_KEY') or st.secrets.get('OPEN_AI_KEY')
+except:
+    api_key = st.secrets.get('OPEN_AI_KEY')
+
+if not api_key:
+    st.error("API key not found. Please check your secrets configuration.")
+    st.stop()
+
+client = OpenAI(api_key=api_key)
 
 # Celebrity name validation
 while True:
