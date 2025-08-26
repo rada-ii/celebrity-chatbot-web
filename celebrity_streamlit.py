@@ -66,14 +66,21 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
-# Initialize OpenAI client with proper API key handling
 try:
-    # Try to get API key from Streamlit secrets (for cloud deployment)
-    api_key = st.secrets["OPEN_AI_KEY"]
-except:
-    # Fallback to local .env file (for local development)
-    env_vars = dotenv_values('.env')
-    api_key = env_vars.get('OPEN_AI_KEY')
+    # Streamlit Cloud uses TOML format secrets
+    api_key = st.secrets.OPEN_AI_KEY
+    st.write(f"Got API key from Streamlit secrets: {api_key[:10]}...")
+except AttributeError:
+    st.write("No secrets found, trying .env file...")
+    try:
+        # Fallback to local .env file
+        env_vars = dotenv_values('.env')
+        api_key = env_vars.get('OPEN_AI_KEY')
+        if api_key:
+            st.write(f"Got API key from .env: {api_key[:10]}...")
+    except Exception as e:
+        st.write(f".env error: {e}")
+        api_key = None
 
 # Check if API key is available
 if not api_key:
