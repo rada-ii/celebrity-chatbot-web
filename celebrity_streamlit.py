@@ -82,6 +82,8 @@ if 'messages' not in st.session_state:
     st.session_state.messages = []
 if 'conversation_started' not in st.session_state:
     st.session_state.conversation_started = False
+if 'last_user_message' not in st.session_state:
+    st.session_state.last_user_message = ""
 
 # Title
 st.markdown("# ⭐ Celebrity Chat Experience")
@@ -101,6 +103,7 @@ with st.sidebar:
                     "role": "system",
                     "content": f"You are {famous_person}. Act as this person would, but keep responses conversational and to 2-3 sentences. Be engaging and stay in character."
                 }]
+                st.session_state.last_user_message = ""
                 st.rerun()
     
     if st.session_state.conversation_started:
@@ -108,6 +111,7 @@ with st.sidebar:
         if st.button("🔄 New Conversation", type="secondary"):
             st.session_state.messages = []
             st.session_state.conversation_started = False
+            st.session_state.last_user_message = ""
             st.rerun()
 
 # Main chat interface
@@ -129,18 +133,17 @@ if st.session_state.conversation_started:
             """, unsafe_allow_html=True)
     
     # Chat input
-    if prompt := st.chat_input("Type your message here..."):
-        # Add user message immediately and display it
+    prompt = st.chat_input("Type your message here...")
+    
+    # Process new message ONLY if it's different from the last one
+    if prompt and prompt != st.session_state.last_user_message:
+        # Store the current prompt to prevent reprocessing
+        st.session_state.last_user_message = prompt
+        
+        # Add user message
         st.session_state.messages.append({"role": "user", "content": prompt})
         
-        # Display the new user message right away
-        st.markdown(f"""
-        <div class="chat-message user-message">
-            <strong>You:</strong> {prompt}
-        </div>
-        """, unsafe_allow_html=True)
-        
-        # Show loading and get AI response
+        # Get AI response immediately
         with st.spinner(f"{famous_person} is thinking..."):
             try:
                 # Call OpenAI API
@@ -153,13 +156,17 @@ if st.session_state.conversation_started:
                 # Add AI response
                 st.session_state.messages.append({"role": "assistant", "content": content})
                 
-                # Force rerun to show the AI response
+                # Clear the last message to allow new input
+                st.session_state.last_user_message = ""
+                
+                # Rerun to show the conversation
                 st.rerun()
                 
             except Exception as e:
                 st.error(f"Error: {e}")
                 # Remove the user message if API call failed
                 st.session_state.messages.pop()
+                st.session_state.last_user_message = ""
                 st.rerun()
 
 else:
