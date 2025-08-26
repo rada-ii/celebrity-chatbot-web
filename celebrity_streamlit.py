@@ -66,20 +66,16 @@ st.markdown("""
 </style>
 """, unsafe_allow_html=True)
 
+# Initialize OpenAI client with proper API key handling
 try:
     # Streamlit Cloud uses TOML format secrets
     api_key = st.secrets.OPEN_AI_KEY
-    st.write(f"Got API key from Streamlit secrets: {api_key[:10]}...")
 except AttributeError:
-    st.write("No secrets found, trying .env file...")
     try:
         # Fallback to local .env file
         env_vars = dotenv_values('.env')
         api_key = env_vars.get('OPEN_AI_KEY')
-        if api_key:
-            st.write(f"Got API key from .env: {api_key[:10]}...")
-    except Exception as e:
-        st.write(f".env error: {e}")
+    except Exception:
         api_key = None
 
 # Check if API key is available
@@ -133,14 +129,13 @@ with st.sidebar:
         if st.button("🚀 Start Conversation", use_container_width=True):
             if famous_person.strip():
                 st.session_state.conversation_started = True
-                # Initialize conversation with system prompt
-                st.session_state.messages = [{
-                    "role": "system",
-                    "content": [{
-                        "type": "input_text",
-                        "text": f"You are {famous_person}. Embody their personality, speaking patterns, and viewpoints. Keep responses conversational and engaging while maintaining their authentic voice. Limit responses to 2-3 sentences for natural conversation flow."
-                    }]
-                }]
+                # Initialize conversation with system message
+                st.session_state.messages = [
+                    {
+                        "role": "system",
+                        "content": f"You are {famous_person}. Embody their personality, speaking patterns, and viewpoints. Keep responses conversational and engaging while maintaining their authentic voice. Limit responses to 2-3 sentences for natural conversation flow."
+                    }
+                ]
                 st.rerun()
             else:
                 st.error("Please enter a celebrity name")
@@ -166,13 +161,13 @@ if st.session_state.conversation_started:
             if msg["role"] == "user":
                 st.markdown(f"""
                 <div class="chat-message user-message">
-                    <strong>You:</strong> {msg['content'][0]['text']}
+                    <strong>You:</strong> {msg['content']}
                 </div>
                 """, unsafe_allow_html=True)
             elif msg["role"] == "assistant":
                 st.markdown(f"""
                 <div class="chat-message assistant-message">
-                    <strong>{famous_person}:</strong> {msg['content'][0]['text']}
+                    <strong>{famous_person}:</strong> {msg['content']}
                 </div>
                 """, unsafe_allow_html=True)
     
@@ -184,34 +179,28 @@ if st.session_state.conversation_started:
         # Add user message to conversation
         user_msg = {
             "role": "user",
-            "content": [{"type": "input_text", "text": user_input}]
+            "content": user_input
         }
         st.session_state.messages.append(user_msg)
         
         # Get AI response with error handling
         try:
             with st.spinner(f"{famous_person} is typing..."):
-                # Call OpenAI API
-                response = client.responses.create(
+                # Call OpenAI Chat Completions API (standard API)
+                response = client.chat.completions.create(
                     model="gpt-3.5-turbo",
-                    input=st.session_state.messages,
-                    text={"format": {"type": "text"}},
-                    reasoning={},
-                    tools=[],
+                    messages=st.session_state.messages,
                     temperature=float(creativity) / 5,
-                    max_output_tokens=2048,
-                    top_p=1,
-                    store=True,
-                    include=[]
+                    max_tokens=2048
                 )
                 
                 # Extract response content
-                content = response.output[0].content[0].text
+                content = response.choices[0].message.content
                 
                 # Add assistant response to conversation
                 assistant_msg = {
                     "role": "assistant",
-                    "content": [{"type": "output_text", "text": content}]
+                    "content": content
                 }
                 st.session_state.messages.append(assistant_msg)
                 st.rerun()
