@@ -10,35 +10,6 @@ st.set_page_config(
     initial_sidebar_state="expanded"
 )
 
-# Simple dark theme CSS
-st.markdown("""
-<style>
-    .stApp { 
-        background-color: #0e1117;
-    }
-    .chat-message {
-        padding: 1rem; 
-        border-radius: 10px; 
-        margin-bottom: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.3);
-    }
-    .user-message { 
-        background-color: #2d3748;
-        color: white;
-        margin-left: 10%;
-    }
-    .assistant-message { 
-        background-color: #4a5568;
-        color: white;
-        margin-right: 10%;
-    }
-    h1 { 
-        color: white; 
-        text-align: center;
-    }
-</style>
-""", unsafe_allow_html=True)
-
 # Get API key
 api_key = st.secrets.get("OPEN_AI_KEY")
 if not api_key:
@@ -72,17 +43,17 @@ def call_openai_api(messages, temperature, max_tokens):
         raise Exception(f"API Error: {response.status_code} - {response.text}")
 
 # Initialize session state
-if 'messages' not in st.session_state:
+if "messages" not in st.session_state:
     st.session_state.messages = []
-if 'conversation_started' not in st.session_state:
+if "conversation_started" not in st.session_state:
     st.session_state.conversation_started = False
 
 # Title
-st.markdown("# ⭐ Celebrity Chat Experience")
+st.title("⭐ Celebrity Chat Experience")
 
 # Sidebar
 with st.sidebar:
-    st.markdown("### Chat Settings")
+    st.header("Chat Settings")
     
     famous_person = st.text_input("Celebrity Name", value="Elon Musk")
     creativity = st.slider("Creativity", 0, 10, 5)
@@ -98,7 +69,7 @@ with st.sidebar:
                 st.rerun()
     
     if st.session_state.conversation_started:
-        st.markdown(f"**Currently chatting with:** {famous_person}")
+        st.write(f"**Currently chatting with:** {famous_person}")
         if st.button("🔄 New Conversation", type="secondary"):
             st.session_state.messages = []
             st.session_state.conversation_started = False
@@ -107,69 +78,55 @@ with st.sidebar:
 # Main chat interface
 if st.session_state.conversation_started:
     
-    # Display all messages except system message
-    for msg in st.session_state.messages[1:]:
-        if msg["role"] == "user":
-            st.markdown(f"""
-            <div class="chat-message user-message">
-                <strong>You:</strong> {msg['content']}
-            </div>
-            """, unsafe_allow_html=True)
-        elif msg["role"] == "assistant":
-            st.markdown(f"""
-            <div class="chat-message assistant-message">
-                <strong>{famous_person}:</strong> {msg['content']}
-            </div>
-            """, unsafe_allow_html=True)
+    # Display chat messages using Streamlit's built-in chat elements
+    for message in st.session_state.messages:
+        if message["role"] == "user":
+            with st.chat_message("user"):
+                st.write(message["content"])
+        elif message["role"] == "assistant":
+            with st.chat_message("assistant"):
+                st.write(f"**{famous_person}:** {message['content']}")
     
-    # Chat input
-    prompt = st.chat_input("Type your message here...")
-    
-    # KRITIČNO: Obradi samo ako postoji prompt I poslednja poruka NIJE user poruka
-    if prompt:
-        # Proveri da li je poslednja poruka već user poruka (da spreči duplikate)
-        if (len(st.session_state.messages) == 1 or  # Prva poruka
-            st.session_state.messages[-1]["role"] != "user"):  # Poslednja nije user poruka
-            
-            # Add user message
-            st.session_state.messages.append({"role": "user", "content": prompt})
-            
-            # Get AI response immediately
-            try:
-                with st.spinner(f"{famous_person} is thinking..."):
-                    content = call_openai_api(
+    # Accept user input
+    if prompt := st.chat_input("What would you like to ask?"):
+        # Add user message to chat history
+        st.session_state.messages.append({"role": "user", "content": prompt})
+        
+        # Display user message
+        with st.chat_message("user"):
+            st.write(prompt)
+        
+        # Generate and display assistant response
+        with st.chat_message("assistant"):
+            with st.spinner(f"{famous_person} is thinking..."):
+                try:
+                    response = call_openai_api(
                         st.session_state.messages,
                         float(creativity) / 5,
                         1000
                     )
-                
-                # Add AI response
-                st.session_state.messages.append({"role": "assistant", "content": content})
-                st.rerun()
-                
-            except Exception as e:
-                st.error(f"Error: {e}")
-                # Remove the user message if API call failed
-                if st.session_state.messages and st.session_state.messages[-1]["role"] == "user":
+                    st.write(f"**{famous_person}:** {response}")
+                    st.session_state.messages.append({"role": "assistant", "content": response})
+                except Exception as e:
+                    st.error(f"Error: {e}")
+                    # Remove the user message if API call failed
                     st.session_state.messages.pop()
 
 else:
     # Welcome screen
-    col1, col2, col3 = st.columns([1, 2, 1])
-    with col2:
-        st.markdown("""
-        ### 🎭 Ready to start chatting?
-        
-        **How it works:**
-        1. Enter a celebrity name in the sidebar
-        2. Adjust creativity level (higher = more creative responses)
-        3. Click 'Start Conversation' 
-        4. Begin chatting!
-        
-        **Try chatting with:**
-        - Elon Musk
-        - Albert Einstein  
-        - Shakespeare
-        - Steve Jobs
-        - Or anyone else you can think of!
-        """)
+    st.markdown("""
+    ### 🎭 Ready to start chatting?
+    
+    **How it works:**
+    1. Enter a celebrity name in the sidebar
+    2. Adjust creativity level (higher = more creative responses)
+    3. Click 'Start Conversation' 
+    4. Begin chatting!
+    
+    **Try chatting with:**
+    - Elon Musk
+    - Albert Einstein  
+    - Shakespeare
+    - Steve Jobs
+    - Or anyone else you can think of!
+    """)
