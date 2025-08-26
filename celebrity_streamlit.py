@@ -14,21 +14,53 @@ st.set_page_config(
 st.markdown("""
 <style>
     .main { padding-top: 2rem; }
-    .stApp { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    .stApp { 
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+        min-height: 100vh;
+    }
     .chat-message {
-        padding: 1rem; border-radius: 10px; margin-bottom: 1rem;
+        padding: 1rem; 
+        border-radius: 10px; 
+        margin-bottom: 1rem;
         box-shadow: 0 2px 4px rgba(0,0,0,0.1);
     }
-    .user-message { background-color: #e3f2fd; margin-left: 20%; color:#191919; }
-    .assistant-message { background-color: #f3e5f5; margin-right: 20%; color: #0f0e2d; }
+    .user-message { 
+        background-color: #e3f2fd; 
+        margin-left: 20%; 
+        color: #191919; 
+    }
+    .assistant-message { 
+        background-color: #f3e5f5; 
+        margin-right: 20%; 
+        color: #0f0e2d; 
+    }
     .stButton > button {
         background: linear-gradient(45deg, #667eea, #764ba2);
-        color: white; border: none; border-radius: 20px;
-        padding: 0.5rem 2rem; font-weight: bold;
+        color: white; 
+        border: none; 
+        border-radius: 20px;
+        padding: 0.5rem 2rem; 
+        font-weight: bold;
     }
-    h1 { color: white; text-align: center; margin-bottom: 2rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+    h1 { 
+        color: white; 
+        text-align: center; 
+        margin-bottom: 2rem; 
+        text-shadow: 2px 2px 4px rgba(0,0,0,0.3); 
+    }
+    .welcome-box {
+        background-color: rgba(255,255,255,0.1) !important;
+        border-radius: 10px;
+        padding: 2rem;
+        text-align: center;
+        color: white;
+        margin-top: 2rem;
+    }
     @media (max-width: 768px) {
-        .chat-message { margin-left: 5% !important; margin-right: 5% !important; }
+        .chat-message { 
+            margin-left: 5% !important; 
+            margin-right: 5% !important; 
+        }
     }
 </style>
 """, unsafe_allow_html=True)
@@ -62,7 +94,15 @@ def call_openai_api(messages, temperature, max_tokens):
     if response.status_code == 200:
         return response.json()["choices"][0]["message"]["content"]
     else:
-        raise Exception(f"API Error: {response.status_code}")
+        raise Exception(f"API Error: {response.status_code} - {response.text}")
+
+# Initialize session state
+if 'messages' not in st.session_state:
+    st.session_state.messages = []
+if 'conversation_started' not in st.session_state:
+    st.session_state.conversation_started = False
+if 'processing' not in st.session_state:
+    st.session_state.processing = False
 
 # Main title
 st.markdown("<h1>⭐ Celebrity Chat Experience</h1>", unsafe_allow_html=True)
@@ -75,11 +115,6 @@ with st.sidebar:
     creativity = st.slider("Response Creativity", 0, 10, 5)
     
     st.markdown("---")
-    
-    # Initialize session state
-    if 'messages' not in st.session_state:
-        st.session_state.messages = []
-        st.session_state.conversation_started = False
     
     # Start conversation
     if not st.session_state.conversation_started:
@@ -99,6 +134,7 @@ with st.sidebar:
         if st.button("🔄 New Conversation", use_container_width=True):
             st.session_state.messages = []
             st.session_state.conversation_started = False
+            st.session_state.processing = False
             st.rerun()
         
         st.markdown("---")
@@ -107,7 +143,7 @@ with st.sidebar:
 # Main chat interface
 if st.session_state.conversation_started:
     # Display conversation history
-    for msg in st.session_state.messages[1:]:
+    for msg in st.session_state.messages[1:]:  # Skip system message
         if msg["role"] == "user":
             st.markdown(f"""
             <div class="chat-message user-message">
@@ -122,31 +158,35 @@ if st.session_state.conversation_started:
             """, unsafe_allow_html=True)
     
     # User input
-    user_input = st.chat_input(f"Message {famous_person}...")
-    
-    if user_input and user_input.strip():
-        # Add user message
-        st.session_state.messages.append({"role": "user", "content": user_input})
+    if not st.session_state.processing:
+        user_input = st.chat_input(f"Message {famous_person}...")
         
-        # Get AI response
-        try:
-            with st.spinner(f"{famous_person} is typing..."):
-                content = call_openai_api(
-                    st.session_state.messages,
-                    float(creativity) / 5,
-                    2048
-                )
-                
-                st.session_state.messages.append({"role": "assistant", "content": content})
-                st.rerun()
-                
-        except Exception as e:
-            st.error(f"Connection error: {e}")
+        if user_input and user_input.strip():
+            # Add user message
+            st.session_state.messages.append({"role": "user", "content": user_input})
+            st.session_state.processing = True
+            
+            # Get AI response
+            try:
+                with st.spinner(f"{famous_person} is typing..."):
+                    content = call_openai_api(
+                        st.session_state.messages,
+                        float(creativity) / 5,
+                        2048
+                    )
+                    
+                    st.session_state.messages.append({"role": "assistant", "content": content})
+                    st.session_state.processing = False
+                    st.rerun()
+                    
+            except Exception as e:
+                st.error(f"Connection error: {e}")
+                st.session_state.processing = False
 
 else:
     # Welcome screen
     st.markdown("""
-    <div style='text-align: center; color: white; padding: 2rem; background-color: rgba(255,255,255,0.1); border-radius: 10px; margin-top: 2rem;'>
+    <div class="welcome-box">
         <h3>Ready to start chatting?</h3>
         <p>Choose a celebrity from the sidebar and click "Start Conversation" to begin!</p>
     </div>
